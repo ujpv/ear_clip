@@ -21,5 +21,6 @@ private:
     QPushButton* resetPB;
     QPushButton* completePB;
     QPushButton* triangulatePB;
+    QPushButton* zoomPB;
     PolygonBuilder* polygonBuilder;
 };

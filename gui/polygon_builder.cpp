@@ -2,15 +2,24 @@
 
 #include <QPolygon>
 
+PolygonBuilder::PolygonBuilder(Ring ring)
+    : shell(std::move(ring))
+{
+    if (ring.size() > 2) {
+        shell.push_back(ring.front());
+        state = {Stage::ShellCompleted, IsValid::Yes};
+    }
+}
+
 void PolygonBuilder::addPoint(PolygonBuilder::Point p)
 {
     if (state.first == Stage::ShellCompleted)
         return;
 
+    auto stage = Stage::DrawingShell;
     shell.push_back(p);
-    if (shell.size() == 3) {
-        setState({state.first, IsValid::Yes});
-    }
+    setState({stage, shell.size() > 2 ? IsValid::Yes : IsValid::No});
+
     emit changed();
 }
 
@@ -56,4 +65,9 @@ void PolygonBuilder::setState(State newState)
     }
 
     state = newState;
+}
+
+PolygonBuilder::State PolygonBuilder::getState() const
+{
+    return state;
 }

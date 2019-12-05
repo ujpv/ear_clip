@@ -17,6 +17,9 @@ MainWindow::MainWindow(PolygonBuilder* polygonBuilder, Triangulation* triangulat
     triangulatePB = new QPushButton("Triangulate");
     buttonsLayout->addWidget(triangulatePB);
 
+//    zoomPB = new QPushButton("Zoom to ring");
+//    buttonsLayout->addWidget(triangulat);
+
     mainLayout->addLayout(buttonsLayout);
 
     paintArea = new PaintArea();
@@ -47,14 +50,22 @@ MainWindow::MainWindow(PolygonBuilder* polygonBuilder, Triangulation* triangulat
 
     connect(polygonBuilder, SIGNAL(changed()), paintArea, SLOT(update()));
     connect(triangulation, SIGNAL(finished()), paintArea, SLOT(update()));
+    connect(triangulation, &Triangulation::finished, this, [&](){
+        triangulatePB->setEnabled(false);
+    });
     connect(polygonBuilder, &PolygonBuilder::stateChanged, this, &MainWindow::updateState);
 
-    updateState(PolygonBuilder::INIT_STATE);
+    updateState(polygonBuilder->getState());
 }
 
 void MainWindow::updateState(PolygonBuilder::State state)
 {
     switch (state.first) {
+        case PolygonBuilder::Stage::Empty:
+            resetPB->setEnabled(false);
+            completePB->setEnabled(false);
+            triangulatePB->setEnabled(false);
+            break;
         case PolygonBuilder::Stage::DrawingShell:
             resetPB->setEnabled(true);
             completePB->setEnabled(state.second == PolygonBuilder::IsValid::Yes);

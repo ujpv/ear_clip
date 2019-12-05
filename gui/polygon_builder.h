@@ -12,10 +12,18 @@ public:
     using Point = QPointF;
     using Ring = QVector<Point>;
 
-    enum class Stage { DrawingShell, ShellCompleted };
+    enum class Stage {
+        Empty,
+        DrawingShell,
+        ShellCompleted
+    };
     enum class IsValid { Yes, No };
     using State = std::pair<Stage, IsValid>;
-    static constexpr State INIT_STATE = {Stage::DrawingShell, IsValid::No};
+
+    explicit PolygonBuilder(Ring ring = {});
+    static constexpr State INIT_STATE = {Stage::Empty, IsValid::No};
+
+    State getState() const;
 
     void draw(QPainter& painter);
 
