@@ -2,7 +2,7 @@
 
 void Triangulation::run()
 {
-    ear_clip::Polygon polygon;
+    ear_clip::Ring polygon;
     {
         auto ring = ring_;
         if (!ring) {

@@ -16,9 +16,8 @@ struct Point {
 
 using Triangle = std::array<Point, 3>;
 using Ring = std::list<Point>;
-using Polygon = Ring;
 
-std::vector<Triangle> triangulate(Polygon polygon);
+std::vector<Triangle> triangulate(Ring polygon);
 
 namespace details {
 
@@ -30,9 +29,9 @@ enum class Direction {
 
 Direction ringDirection(const Ring& ring);
 Direction triangleDirection(const Triangle& triangle);
-Polygon normalizePolygon(Polygon polygon);
+Ring normalizePolygon(Ring ring);
 
-Polygon selfIntersect(Polygon);
+Ring selfIntersect(Ring ring);
 
 bool intersects(Point a, Point b, Point c, Point d);
 Point intersection(Point a, Point b, Point c, Point d);

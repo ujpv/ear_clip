@@ -25,13 +25,12 @@ auto getPointInd = [](Point p) {
     return ind;
 };
 
-
 std::ostream& operator<<(std::ostream& s, const Point& point) {
     s << point.x << ' ' << point.y;
     return s;
 }
 
-std::ostream& operator<<(std::ostream& s, const Polygon& polygon) {
+std::ostream& operator<<(std::ostream& s, const Ring& polygon) {
     for (auto p: polygon)
         s << p.x << ' ' << p.y << ' ';
 
@@ -57,7 +56,7 @@ double signedArea(const Triangle& t)
 
 }
 
-std::vector<Triangle> triangulate(Polygon polygon)
+std::vector<Triangle> triangulate(Ring polygon)
 {
     std::cerr << "Src polygon: " << polygon << '\n';
     polygon = details::normalizePolygon(std::move(polygon));
@@ -166,20 +165,8 @@ std::vector<Triangle> triangulate(Polygon polygon)
 
 namespace details {
 
-bool pointInTriangle(const Triangle& t, Point p)
-{
-    if (p == t[0] || p == t[1] || p == t[2])
-        return false;
 
-    const Point& a = t[0];
-    const Point& b = t[1];
-    const Point& c = t[2];
-    return (c.x - p.x) * (a.y - p.y) - (a.x - p.x) * (c.y - p.y) >= 0 &&
-           (a.x - p.x) * (b.y - p.y) - (b.x - p.x) * (a.y - p.y) >= 0 &&
-           (b.x - p.x) * (c.y - p.y) - (c.x - p.x) * (b.y - p.y) >= 0;
-}
-
-Direction ringDirection(const Polygon& ring)
+Direction ringDirection(const Ring& ring)
 {
     if (ring.size() < 3)
         throw std::invalid_argument("Ring has less than 3 points");
@@ -220,17 +207,30 @@ Direction triangleDirection(const ear_clip::Triangle& triangle)
     return area > 0 ? Direction::CWISE : Direction::CCWISE;
 }
 
-Polygon normalizePolygon(Polygon polygon)
+bool pointInTriangle(const Triangle& t, Point p)
 {
-    if (polygon.empty())
-        return polygon;
-    if (polygon.size() < 3)
+    if (p == t[0] || p == t[1] || p == t[2])
+        return false;
+
+    const Point& a = t[0];
+    const Point& b = t[1];
+    const Point& c = t[2];
+    return (c.x - p.x) * (a.y - p.y) - (a.x - p.x) * (c.y - p.y) >= 0 &&
+           (a.x - p.x) * (b.y - p.y) - (b.x - p.x) * (a.y - p.y) >= 0 &&
+           (b.x - p.x) * (c.y - p.y) - (c.x - p.x) * (b.y - p.y) >= 0;
+}
+
+Ring normalizePolygon(Ring ring)
+{
+    if (ring.empty())
+        return ring;
+    if (ring.size() < 3)
         throw std::invalid_argument("It's not a polygon");
 
-    if (polygon.back() == polygon.front())
-        polygon.pop_back();
+    if (ring.back() == ring.front())
+        ring.pop_back();
 
-    return polygon;
+    return ring;
 }
 
 bool intersects(Point a, Point b, Point c, Point d)
@@ -272,6 +272,9 @@ Ring selfIntersect(Ring ring)
     std::vector<std::optional<std::pair<size_t/*from*/, size_t/*to*/>>> edges;
     for (auto b = ring.begin(), e = std::next(ring.begin()); e != ring.end(); b++, e++) {
         auto edge = std::make_pair(getPointInd(*b), getPointInd(*e));
+        if (edge.first == edge.second)
+            continue;
+
         edges.emplace_back(edge);
     }
     auto args = std::make_pair(
