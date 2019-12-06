@@ -131,10 +131,11 @@ ec::Point rotate(ec::Point p, double a)
 size_t testAngle() {
     std::cout << "Test angles: ";
     const std::vector<std::tuple<ec::Point, ec::Point, ec::Point, double>> CASES{
+        {{-1, 0}, {0, 0}, {1, 0}, M_PI},
         {{1, 14}, {5, 10}, {9, 10}, M_PI * .75},
         {{1, 14}, {5, 10}, {7, 12}, M_PI * .5 },
         {{7, 8},  {5, 10}, {7, 12}, M_PI * 1.5},
-        {{7, 12}, {5, 10}, {7, 8},  M_PI * 0.5},
+        {{7, 12}, {5, 10}, {7, 8},  M_PI * .5},
     };
     size_t failedCount = 0;
     for (size_t i = 0; i < CASES.size(); ++i) {
@@ -143,8 +144,10 @@ size_t testAngle() {
             double angle = ecd::angleRad(rotate(a, alpha), rotate(b, alpha), rotate(c, alpha));
             bool failed = !expectEqual(angle, expeced);
             failedCount += failed;
-            if (failed)
+            if (failed) {
                 std::cout << "Test " << i << " angles failed\n";
+                break;
+            }
         }
     }
 
@@ -191,16 +194,13 @@ int main()
 //    failed += testRingRotation({{{0, 0}, {1, 0}, {0, 1}}}, ecd::Direction::CCWISE);
 //
 //    failed += testTriangle(
-//        {{0, 0},
-//         {1, 0},
-//         {1, 1},
-//         {0, 1}},
-//        {{{{0, 0}, {0, 1}, {1, 0}}}, {{{0, 1}, {1, 0}, {1, 1}}}}
-//        /*{{{{{0, 0}, {0, 1}, {1, 1}}}, {{{0, 0}, {1, 0}, {1, 1}}}}}*/);
+//        {{0, 0}, {1, 0}, {1, 1}, {0, 1}},
+//        {{{{0, 0}, {0, 1}, {1, 0}}}, {{{0, 1}, {1, 0}, {1, 1}}}});
 //
 //    failed += testTriangWithRotation(
 //        {{{0, 0}, {1, 0}, {0, 1}}},
 //        {{{{0, 0}, {1, 0}, {0, 1}}}});
+//
 //    failed += testTriangWithRotation(
 //        {{{0, 0}, {4,2}, {2,4}, {2,2}}},
 //        {{{{{0, 0}, {2, 2}, {4, 2}}},
@@ -213,11 +213,14 @@ int main()
 //
 //    failed += testAngle();
 //
-//    failed += testSelfIntersect({{{0, 0}, {1, 0}, {0, 1}}}, {{{0, 1}, {1, 0}, {0, 0}}});
-//    failed += testSelfIntersect({{{0, 0}, {1, 0}, {0, 1}, {1, 1}}}, {{{0.5, 0.5}, {0, 1}, {1, 1}, {0.5, 0.5}, {1, 0}, {0, 0}}});
+//    failed += testSelfIntersect({{{0, 0}, {1, 0}, {0, 1}}}, {{{1, 0}, {0, 1}, {0, 0}}});
+    failed += testSelfIntersect({{{0, 0}, {1, 0}, {0, 1}, {1, 1}}}, {{{0.5, 0.5}, {0, 1}, {1, 1}, {0.5, 0.5}, {1, 0}, {0, 0}}});
+
+
+// We are here
 //    failed += testSelfIntersect({{{0, -1}, {1, 0}, {0, 1}, {1, -1}}}, {{}});
 //    testTriangle({{{0, -1}, {1, 0}, {0, 1}, {1, -1}}}, {{}});
-    testTriangle({{{0, 0}, {1, 0}, {0, 1}, {1, 1}}}, {{}});
+//    testTriangle({{{0, 0}, {1, 0}, {0, 1}, {1, 1}}}, {{}});
 //    failed += testSelfIntersect({{{5, 2}, {10, 2}, {50, 50}, {91, 47}}}, {});
 //    failed += testSelfIntersect({{0, 0}, {1, 0}, {0, 1}}, {{0, 1}, {0, 0}, {1, 0}});
 //    failed += testPointInTriangle();
@@ -230,6 +233,9 @@ int main()
     }
 
 // {{276, 387}, {551, 75}, {662, 503}, {910, 296}, {823, 171}, {753, 135}, {727, 78}, {675, 88}, {675, 125}}
+
+// triangulate test: 0 1 1 0 1 2 2 1
+
 
     return 0;
 }

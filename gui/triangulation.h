@@ -13,7 +13,7 @@ public:
     using Point = QPointF;
     using Triangle = QVector<Point>;
     using Ring = QVector<Point>;
-    void draw(QPainter& painter);
+    void draw(QPainter& painter, const QTransform& transform);
     void setRing(Ring newPolygon);
 
 public slots:

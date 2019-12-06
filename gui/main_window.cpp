@@ -17,8 +17,10 @@ MainWindow::MainWindow(PolygonBuilder* polygonBuilder, Triangulation* triangulat
     triangulatePB = new QPushButton("Triangulate");
     buttonsLayout->addWidget(triangulatePB);
 
-//    zoomPB = new QPushButton("Zoom to ring");
-//    buttonsLayout->addWidget(triangulat);
+    zoomPB = new QPushButton("Zoom to ring");
+    buttonsLayout->addWidget(zoomPB);
+    resetViewPB = new QPushButton("Reset view");
+    buttonsLayout->addWidget(resetViewPB);
 
     mainLayout->addLayout(buttonsLayout);
 
@@ -29,16 +31,17 @@ MainWindow::MainWindow(PolygonBuilder* polygonBuilder, Triangulation* triangulat
     setWindowTitle("Ear clipping demo");
 
     paintArea->setMinimumSize(512, 512);
-    paintArea->addPaintLayer([polygonBuilder](QPainter& painter) {
-        polygonBuilder->draw(painter);
+    paintArea->addPaintLayer([polygonBuilder](QPainter& p, const QTransform& t) {
+        polygonBuilder->draw(p, t);
     });
 
-    paintArea->addPaintLayer([triangulation](QPainter& painter) {
-        triangulation->draw(painter);
+    paintArea->addPaintLayer([triangulation](QPainter& p, const QTransform& t) {
+        triangulation->draw(p, t);
     });
 
     connect(resetPB, SIGNAL(clicked()), polygonBuilder, SLOT(reset()));
     connect(resetPB, SIGNAL(clicked()), triangulation, SLOT(reset()));
+    connect(resetPB, SIGNAL(clicked()), paintArea, SLOT(resetView()));
 
     connect(completePB, SIGNAL(clicked()), polygonBuilder, SLOT(completeShell()));
     connect(paintArea, &PaintArea::newPoint, polygonBuilder, &PolygonBuilder::addPoint);
@@ -55,6 +58,12 @@ MainWindow::MainWindow(PolygonBuilder* polygonBuilder, Triangulation* triangulat
     });
     connect(polygonBuilder, &PolygonBuilder::stateChanged, this, &MainWindow::updateState);
 
+    connect(zoomPB, &QPushButton::clicked, paintArea, [=]() {
+        paintArea->setBBox(polygonBuilder->getBBox());
+        paintArea->update();
+    });
+    connect(resetViewPB, SIGNAL(clicked()), paintArea, SLOT(resetView()));
+
     updateState(polygonBuilder->getState());
 }
 
@@ -65,16 +74,22 @@ void MainWindow::updateState(PolygonBuilder::State state)
             resetPB->setEnabled(false);
             completePB->setEnabled(false);
             triangulatePB->setEnabled(false);
+            zoomPB->setEnabled(false);
+            resetViewPB->setEnabled(false);
             break;
         case PolygonBuilder::Stage::DrawingShell:
             resetPB->setEnabled(true);
             completePB->setEnabled(state.second == PolygonBuilder::IsValid::Yes);
             triangulatePB->setEnabled(false);
+            zoomPB->setEnabled(false);
+            resetViewPB->setEnabled(false);
             break;
         case PolygonBuilder::Stage::ShellCompleted:
             resetPB->setEnabled(true);
             completePB->setEnabled(false);
             triangulatePB->setEnabled(true);
+            zoomPB->setEnabled(true);
+            resetViewPB->setEnabled(true);
             break;
         default:
             throw std::runtime_error("Invalid state");

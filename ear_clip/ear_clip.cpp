@@ -8,11 +8,43 @@
 #include <cmath>
 #include <iostream>
 
-#include "../tests/test_util.h"
-
 namespace ear_clip {
 
 namespace {
+
+std::vector<Point> nodes;
+std::map<Point, size_t> pointToNode;
+auto getPointInd = [](Point p) {
+    if (auto it = pointToNode.find(p); it != pointToNode.end()) {
+        return it->second;
+    }
+
+    auto ind = nodes.size();
+    nodes.push_back(p);
+    pointToNode[p] = ind;
+    return ind;
+};
+
+
+std::ostream& operator<<(std::ostream& s, const Point& point) {
+    s << point.x << ' ' << point.y;
+    return s;
+}
+
+std::ostream& operator<<(std::ostream& s, const Polygon& polygon) {
+    for (auto p: polygon)
+        s << p.x << ' ' << p.y << ' ';
+
+    return s;
+}
+
+template <class T>
+std::ostream& operator<<(std::ostream& s, const std::vector<T>& v) {
+    for (auto i: v)
+        s << i << ' ';
+
+    return s;
+}
 
 double signedArea(const Triangle& t)
 {
@@ -31,9 +63,7 @@ std::vector<Triangle> triangulate(Polygon polygon)
     polygon = details::normalizePolygon(std::move(polygon));
     std::cerr << "Norm polygon: " << polygon << '\n';
     polygon = details::selfIntersect(std::move(polygon));
-    std::cerr << "self intersected polygon: " << polygon << '\n';
-    polygon = details::normalizePolygon(std::move(polygon));
-    std::cerr << "Norm polygon: " << polygon << '\n';
+    std::cerr << "Prep polygon: " << polygon << '\n';
 
     if (polygon.empty())
         return {};
@@ -41,12 +71,17 @@ std::vector<Triangle> triangulate(Polygon polygon)
     if (polygon.size() < 3)
         throw std::invalid_argument("It's not a polygon");
 
-    auto rot = details::ringDirection(polygon);
+    auto ringRotation = details::ringDirection(polygon);
     auto nextIt = [&polygon](const auto& it) {
         auto next = std::next(it);
         if (next == polygon.end())
             next = polygon.begin();
         return next;
+    };
+    auto prevIt = [&polygon](const auto& it) {
+        if (it == polygon.begin())
+            std::prev(polygon.end());
+        return std::prev(it);
     };
 
     std::vector<Triangle> result;
@@ -58,37 +93,72 @@ std::vector<Triangle> triangulate(Polygon polygon)
         counter++;
         auto b = nextIt(a);
         auto c = nextIt(b);
-        if (*a == *c) {
-            counter = 0;
-            polygon.erase(b);
-            polygon.erase(c);
-            continue;
-        }
+        std::cerr << "Triangle: " << getPointInd(*a) << '-' << getPointInd(*b) << '-' << getPointInd(*c) << '\n';
 
         Triangle t{*a, *b, *c};
         if (signedArea(t) == 0) {
-            counter = 0;
-            polygon.erase(b);
+            std::cerr << "Zero area. Skip\n";
+            a = nextIt(a);
             continue;
         }
 
-        bool isEar = triangleDirection(t) == rot;
+        bool isEar = triangleDirection(t) == ringRotation;
         if (isEar) {
+            std::cerr << "Ear rotation. ";
             for (auto vIt = nextIt(c); vIt != a; vIt = nextIt(vIt)) {
                 Point& p = *vIt;
                 if (pointInTriangle(t, p)) {
                     isEar = false;
+                    std::cerr << "Contains other points. ";
                     break;
                 }
             }
         }
 
+        auto removeEmptyLoops = [&](auto a) {
+            bool changed = true;
+            while (changed && polygon.size() > 3) {
+                changed = false;
+                auto b = nextIt(a); auto c = nextIt(b);
+                if (*a == *c) {
+                    polygon.erase(b);
+                    polygon.erase(c);
+                    changed = true;
+                }
+                if (polygon.size() < 3)
+                    return a;
+                b = prevIt(a); c = nextIt(a);
+                if (*b == *c) {
+                    polygon.erase(a);
+                    polygon.erase(c);
+                    a = b;
+                    changed = true;
+                }
+                if (polygon.size() < 3)
+                    return a;
+                b = prevIt(a); c = prevIt(b);
+                if (*c == *a) {
+                    polygon.erase(a);
+                    polygon.erase(b);
+                    a = c;
+                    changed = true;
+                }
+            }
+
+            return a;
+        };
+
         if (isEar) {
+            std::cerr << "clip!\n";
             result.push_back(t);
             polygon.erase(b);
+            a = removeEmptyLoops(a);
+            a = nextIt(a);
             counter = 0;
+        } else {
+            std::cerr << "skip\n";
+            a = nextIt(a);
         }
-        a = nextIt(a);
     }
 
     return result;
@@ -160,11 +230,6 @@ Polygon normalizePolygon(Polygon polygon)
     if (polygon.back() == polygon.front())
         polygon.pop_back();
 
-    polygon.unique();
-    if (details::ringDirection(polygon) != Direction::CCWISE) {
-        std::reverse(polygon.begin(), polygon.end());
-    }
-
     return polygon;
 }
 
@@ -198,23 +263,13 @@ Ring selfIntersect(Ring ring)
     if (ring.size() < 3)
         return ring;
 
-    std::vector<Point> nodes;
     nodes.reserve(ring.size());
-    std::map<Point, size_t> pointToNode;
-    auto getPointInd = [&](Point p) {
-        if (auto it = pointToNode.find(p); it != pointToNode.end()) {
-            return it->second;
-        }
 
-        auto ind = nodes.size();
-        nodes.push_back(p);
-        pointToNode[p] = ind;
-        return ind;
-    };
+    // for debug. remove it
     for (auto p: ring)
         getPointInd(p);
 
-    std::vector<std::optional<std::pair<size_t, size_t>>> edges;
+    std::vector<std::optional<std::pair<size_t/*from*/, size_t/*to*/>>> edges;
     for (auto b = ring.begin(), e = std::next(ring.begin()); e != ring.end(); b++, e++) {
         auto edge = std::make_pair(getPointInd(*b), getPointInd(*e));
         edges.emplace_back(edge);
@@ -222,6 +277,11 @@ Ring selfIntersect(Ring ring)
     auto args = std::make_pair(
         getPointInd(ring.front()), getPointInd(ring.back()));
     edges.emplace_back(args);
+
+    std::cerr << "Building graph:\n";
+    for (const auto e: edges) {
+        std::cerr << "Edge: " <<  e->first << '-' << e->second << '\n';
+    }
 
     std::map<size_t, std::vector<Point>> edgeToSplitPoints;
     for (size_t i = 0; i < edges.size(); ++i) {
@@ -239,6 +299,12 @@ Ring selfIntersect(Ring ring)
         }
     }
 
+    std::cerr << "Nodes:\n";
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        std::cerr << i << ": (" << nodes[i] << ")\n";
+    }
+
+    std::cerr << "Splitting edges:\n";
     std::vector<Point> points;
     for(const auto& [edge, splitPoints]: edgeToSplitPoints) {
         points.clear();
@@ -250,8 +316,10 @@ Ring selfIntersect(Ring ring)
 
         edges[edge] = std::nullopt;
 
+        std::cerr << edges[edge]->first << '-' << edges[edge]->second << " to:\n";
         for (auto b = points.begin(), e = std::next(points.begin()); e != points.end(); b++, e++) {
             edges.emplace_back(std::make_pair(getPointInd(*b), getPointInd(*e)));
+            std::cerr << edges.back()->first << '-' << edges.back()->second << '\n';
         }
     }
 
@@ -267,14 +335,18 @@ Ring selfIntersect(Ring ring)
         mostLeft = std::min(mostLeft, nodes[e->second]);
     }
 
-    size_t startPoint = getPointInd(mostLeft);
+    size_t startPointId = getPointInd(mostLeft);
+    std::cerr << "Start node: " << startPointId << '\n';
     {   // setup traverse order
         auto fakeNode = mostLeft; // first node for dfs
-        fakeNode.x *= 0.1; // shift left
+        fakeNode.x = std::numeric_limits<double>::lowest(); // shift left
 
         std::vector<double> angles(nodes.size());
         std::vector<char> visited(nodes.size());
-        std::vector<std::pair<size_t, Point>> stack{{{startPoint, fakeNode}}};
+        std::vector<std::pair<size_t/*node to*/, Point /*prev point*/>> stack{
+            {{startPointId, fakeNode}}};
+
+        std::vector<size_t> debugOrder;
         while (!stack.empty()) {
             auto[nodeId, prevPoint] = stack.back();
             auto nodePoint = nodes[nodeId];
@@ -282,6 +354,7 @@ Ring selfIntersect(Ring ring)
             if (visited[nodeId])
                 continue;
             visited[nodeId] = true;
+            debugOrder.push_back(nodeId);
 
             auto& neighbours = graph[nodeId];
             for (auto [toId, _]: neighbours) {
@@ -293,19 +366,19 @@ Ring selfIntersect(Ring ring)
                           return angles[l.first] < angles[r.first];
                       });
 
-            std::reverse(neighbours.begin(), neighbours.end());
             for (auto [toId, _]: neighbours) {
                 stack.emplace_back(toId, nodePoint);
             }
-            std::reverse(neighbours.begin(), neighbours.end());
         }
+
+        std::cerr << "Debug order: " << debugOrder << '\n';
     }
 
     std::vector<size_t> traverseOrder;
     traverseOrder.reserve(nodes.size());
     { // traverse
         std::vector<std::pair<size_t, size_t>> stack; // (nodeId, edgeId)
-        stack.push_back(graph[startPoint].front());
+        stack.push_back(graph[startPointId].back());
         while (!stack.empty()) {
             auto [nodeId, edgeId] = stack.back();
             stack.pop_back();
@@ -314,12 +387,15 @@ Ring selfIntersect(Ring ring)
             }
             edges[edgeId] = std::nullopt;
             traverseOrder.push_back(nodeId);
-            auto & v = graph[nodeId];
-            for (auto [toId, toEdgeId]: v) {
-                if (edges[toEdgeId]) {
-                    stack.emplace_back(toId, toEdgeId);
-                    break;
-                }
+            auto& v = graph[nodeId];
+            while (!v.empty()) {
+                auto [toId, toEdgeId] = v.back();
+                v.pop_back();
+                if (!edges[toEdgeId])
+                    continue;
+
+                stack.emplace_back(toId, toEdgeId);
+                break;
             }
         }
     }
@@ -327,6 +403,8 @@ Ring selfIntersect(Ring ring)
     ring.clear();
     for (auto id: traverseOrder)
         ring.push_back(nodes[id]);
+
+    std::cerr << "Traverse order: " << traverseOrder << '\n';
 
     return ring;
 }
