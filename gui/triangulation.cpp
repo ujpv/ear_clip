@@ -27,13 +27,16 @@ void Triangulation::run()
 
 void Triangulation::draw(QPainter& painter, const QTransform& transform)
 {
-    painter.setPen(QPen(Qt::green, 1, Qt::SolidLine, Qt::RoundCap));
     auto ts = triangles;
     if (!ts)
         return;
 
     for (const auto& t: *ts) {
-        painter.drawPolyline(transform.map(t));
+        const auto transformed = transform.map(t);
+        painter.setPen(QPen(Qt::green, 2, Qt::SolidLine, Qt::RoundCap));
+        painter.drawPolyline(transformed);
+        painter.setPen(QPen(Qt::red, 5, Qt::SolidLine, Qt::RoundCap));
+        painter.drawPoints(transformed);
     }
 }
 

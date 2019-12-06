@@ -32,18 +32,18 @@ void PolygonBuilder::reset()
 {
     shell.clear();
     setState(INIT_STATE);
-    bBox = BBox();
+    bBox = std::nullopt;
 
     emit changed();
 }
 
 void PolygonBuilder::draw(QPainter& painter, const QTransform& transform)
 {
-    painter.setPen(QPen(Qt::black, 3, Qt::SolidLine, Qt::RoundCap));
+    painter.setPen(QPen(Qt::black, 4, Qt::SolidLine, Qt::RoundCap));
     auto shellTransformed = transform.map(shell);
     painter.drawPolyline(shellTransformed);
 
-    painter.setPen(QPen(Qt::black, 9, Qt::SolidLine, Qt::RoundCap));
+    painter.setPen(QPen(Qt::black, 10, Qt::SolidLine, Qt::RoundCap));
     painter.drawPoints(shellTransformed);
 }
 

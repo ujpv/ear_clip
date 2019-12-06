@@ -15,12 +15,17 @@ void PaintArea::paintEvent(QPaintEvent* event)
     QTransform transform;
     if (!bBox.isEmpty()) {
         auto viewport = painter.viewport();
+        auto extendedBbox = bBox.marginsAdded(QMarginsF(
+            bBox.width() * 0.025,
+            bBox.height() * 0.025,
+            bBox.width() * 0.025,
+            bBox.height() * 0.025));
         double scale = std::min(
-            viewport.width() / bBox.width(),
-            viewport.height() / bBox.height() );
+            viewport.width() / extendedBbox.width(),
+            viewport.height() / extendedBbox.height() );
         transform = QTransform()
             .scale(scale, scale)
-            .translate(-bBox.left(), -bBox.top());
+            .translate(-extendedBbox.left(), -extendedBbox.top());
     }
 
     for (auto& h: paintHandlers)
