@@ -13,7 +13,8 @@ namespace ecd = ear_clip::details;
 inline std::ostream& operator<<(std::ostream& s, ecd::Direction direction) {
     static const std::map<ecd::Direction, std::string> DIRS = {
         {ecd::Direction::CWISE,  "Clockwise"},
-        {ecd::Direction::CCWISE, "Counter clockwise"}
+        {ecd::Direction::CCWISE, "Counter clockwise"},
+        {ecd::Direction::NO_AREA, "No area"},
     };
     s << DIRS.at(direction);
     return s;
@@ -25,7 +26,7 @@ inline std::ostream& operator<<(std::ostream& s, const ec::Point& p) {
 }
 
 inline std::ostream& operator<<(std::ostream& s, const ec::Triangle& t) {
-    s << "{" << t[0] << ", " << t[1] << ", " << t[2] << "}";
+    s << "{{" << t[0] << ", " << t[1] << ", " << t[2] << "}}";
     return s;
 }
 
@@ -61,9 +62,9 @@ inline std::ostream& operator<<(std::ostream& s, const std::vector<ec::Triangle>
 
 bool expectEqual(double a, double b) {
     constexpr double EPS = 0.0001;
-    bool equal = std::abs(a - b) < std::min(a, b) * EPS;
+    bool equal = std::abs(a - b) <= std::max(std::abs(a), std::abs(b)) * EPS;
     if (!equal)
-        std::cout << "Test failed: " << a << "!= " << b << '\n';
+        std::cout << "Test failed: " << a << " != " << b << '\n';
 
     return equal;
 }
@@ -71,7 +72,7 @@ bool expectEqual(double a, double b) {
 bool expectEqual(ec::Point a, ec::Point b) {
     bool equal = expectEqual(a.x, b.x) && expectEqual(a.y, b.y);
     if (!equal)
-        std::cout << "Test failed: " << a << "!= " << b << '\n';
+        std::cout << "Test failed: " << a << " != " << b << '\n';
 
     return equal;
 }
@@ -90,7 +91,7 @@ bool expectEqual(ec::Triangle a, ec::Triangle b) {
 
 bool expectEqual(std::vector<ec::Triangle> a, std::vector<ec::Triangle> b) {
     if (a.size() != b.size()) {
-        std::cout << "Test failed: size " << a.size() << "!= " << b.size() << '\n';
+        std::cout << "Test failed: " << a << " != " << b << '\n';
         return false;
     }
 
@@ -103,14 +104,14 @@ bool expectEqual(std::vector<ec::Triangle> a, std::vector<ec::Triangle> b) {
     for (auto i = 0; i < a.size(); ++i)
         equal &= expectEqual(a[i], b[i]);
     if (!equal)
-        std::cout << "Test failed: " << a << "!= " << b << '\n';
+        std::cout << "Test failed: " << a << " != " << b << '\n';
 
     return equal;
 }
 
 bool testRingRotation(ec::Ring r, ecd::Direction dir_tar)
 {
-    std::cout << "Test ring rotation. Expected: " << dir_tar << '\n';
+    std::cout << "Test ring rotation. Direction: " << dir_tar << '\n';
     bool failed = false;
     for (size_t i = 0; i < r.size(); ++i) {
         std::rotate(r.begin(), std::next(r.begin()), r.end());
@@ -123,10 +124,10 @@ bool testRingRotation(ec::Ring r, ecd::Direction dir_tar)
     return failed;
 }
 
-bool testTriangulate(const ec::Ring& r, const std::vector<ec::Triangle>& expected)
+bool testTriangulate(const ec::Ring& r,
+    const std::vector<ec::Triangle>& expected, const std::string& name)
 {
-    std::cout << "Test triangulation. Expected: " << expected << '\n';
-    std::cout << "Test ring " << r << ": ";
+    std::cout << "Test triangulation. " << name << ": ";
     auto ts = ec::triangulate(r);
     bool ok = expectEqual(ts, expected);
     std::cout << (ok ? "OK" : "Failed") << '\n';
@@ -238,9 +239,12 @@ size_t testPointInTriangle() {
 int main()
 {
     size_t failed = 0;
+    ec::enableTrace(false);
 
     failed += testRingRotation({{{0, 0}, {0, 1}, {1, 0}}}, ecd::Direction::CWISE);
     failed += testRingRotation({{{0, 0}, {1, 0}, {0, 1}}}, ecd::Direction::CCWISE);
+    failed += testRingRotation({{{0, 0}, {1, 0}, {2, 0}}}, ecd::Direction::NO_AREA);
+    failed += testRingRotation({{{0, 0}, {1, 0}, {0, 0}}}, ecd::Direction::NO_AREA);
 
     failed += testIntersects({0, 0}, {1, 1}, {0, 1}, {1, 0}, true);
     failed += testIntersects({0, 0}, {0, 1}, {1, 1}, {1, 1}, false);
@@ -265,6 +269,9 @@ int main()
     const ec::Ring zeroAreaLoopStart = {{{ 0, -1}, {0, 0},
                                          { 1,  1}, {0, 0},
                                          {-1,  1}, {0, 0}}};
+    const ec::Ring zeroAreaTriangleBag = {{118, 553}, {554, 151}, {552, 623},
+                                          {308, 113}, {428, 741}, {252, 761},
+                                          {154, 723}, {116, 689}};
 
     failed += testNormalize(simplestRing, {{{1, 0}, {0, 1}, {0, 0}}});
     failed += testNormalize(repeatPoint, {{{1, 0}, {0, 1}, {0, 0}}});
@@ -273,16 +280,42 @@ int main()
     failed += testNormalize(ringCross,
                             {{0, 0}, {-1, -2}, {1, -2}, {0, 0}, {2, 1}, {1, 2}, {0, 0}, {-1, 2}, {-2, 1}});
 
+
     failed += testNormalize(zeroAreaLoop, {{1, 0}, {0, 0}});
     failed += testNormalize(zeroAreaLoop2, {{1, 0}, {2, 0}, {1, 0}, {0, 0}});
     failed += testNormalize(zeroAreaLoop3, {{1, 0}, {2, 0}, {3, 0}, {2, 0}, {1, 0}, {0, 0}});
     failed += testNormalize(zeroAreaLoopStart,
                             {{0, 0}, {0, -1}, {0, 0}, {1, 1}, {0, 0}, {-1, 1}});
 
-    failed += testTriangulate(zeroAreaLoop, {});
-    failed += testTriangulate(zeroAreaLoop2, {});
-    failed += testTriangulate(zeroAreaLoop3, {});
-    failed += testTriangulate(zeroAreaLoopStart, {});
+    failed += testTriangulate(zeroAreaLoop, {}, "Empty loop");
+    failed += testTriangulate(zeroAreaLoop2, {}, "Empty loop2");
+    failed += testTriangulate(zeroAreaLoop3, {}, "Empty loop3");
+    failed += testTriangulate(zeroAreaLoopStart, {}, "Empty loop star");
+
+    failed += testTriangulate(simplestRing,
+        {{{{1, 0}, {0, 1}, {0, 0}}}},
+        "Simple");
+    failed += testTriangulate(repeatPoint,
+        {{{{1, 0}, {0, 1}, {0, 0}}}},
+        "Repeating point");
+    failed += testTriangulate(ringM,
+        {{{{4, 2}, {5, 1}, {5, 2}}}, {{{4, 2}, {3, 3}, {2, 2}}}, {{{2, 2}, {1, 2}, {1, 1}}}},
+        "M-ring");
+    failed += testTriangulate(ring8,
+        {{{{0.5, 0.5}, {1, 1}, {0, 1}}}, {{{0.5, 0.5}, {0, 0}, {1, 0}}}},
+        "8-ring");
+    failed += testTriangulate(ringCross,
+        {{{{0, 0}, {-1, -2}, {1, -2}}}, {{{0, 0}, {2, 1}, {1, 2}}}, {{{0, 0}, {-1, 2}, {-2, 1}}}},
+        "Ring cross");
+
+    failed += testTriangulate(zeroAreaTriangleBag, {
+        {{{{351.022, 338.149}, {308, 113}, {395.915, 296.757}}},
+            {{{395.915, 296.757}, {554, 151}, {552, 623}}},
+            {{{351.022, 338.149}, {428, 741}, {252, 761}}},
+            {{{351.022, 338.149}, {252, 761}, {154, 723}}},
+            {{{351.022, 338.149}, {154, 723}, {116, 689}}},
+            {{{351.022, 338.149}, {116, 689}, {118, 553}}}}},
+         "Zero area triangle");
 
 
     if (failed == 0) {

@@ -7,6 +7,7 @@
 #include <numeric>
 #include <cmath>
 #include <iostream>
+#include <fstream>
 
 namespace ear_clip {
 
@@ -45,115 +46,116 @@ std::ostream& operator<<(std::ostream& s, const std::vector<T>& v) {
     return s;
 }
 
-double signedArea(const Triangle& t)
+bool traceEnabled = true;
+
+class NullStream : public std::fstream {
+public:
+    NullStream() { setstate(std::ios_base::badbit); }
+};
+
+std::ostream& trace()
 {
-    const Point& a = t[0];
-    const Point& b = t[1];
-    const Point& c = t[2];
-    auto area = (c.y - b.y) * (a.x - c.x) - (c.x - b.x) * (a.y - c.y);
-    return area;
+    static NullStream nullStream;
+    return traceEnabled ? std::cerr : nullStream;
 }
 
 }
 
-std::vector<Triangle> triangulate(Ring polygon)
+void enableTrace(bool enable)
 {
-    std::cerr << "Src  polygon: " << polygon << '\n';
-    polygon = details::normalizeRing(std::move(polygon));
-    std::cerr << "Norm polygon: " << polygon << '\n';
+    traceEnabled = enable;
+}
 
-    if (polygon.empty())
+std::vector<Triangle> triangulate(Ring ring)
+{
+    trace() << "Src  polygon: " << ring << '\n';
+    ring = details::normalizeRing(std::move(ring));
+    trace() << "Norm polygon: " << ring << '\n';
+
+    if (ring.size() < 3)
         return {};
 
-    if (polygon.size() < 3)
-        throw std::invalid_argument("It's not a polygon");
-
-    auto ringRotation = details::ringDirection(polygon);
-    auto nextIt = [&polygon](const auto& it) {
+    auto nextIt = [&ring](const auto& it) {
         auto next = std::next(it);
-        if (next == polygon.end())
-            next = polygon.begin();
+        if (next == ring.end())
+            next = ring.begin();
         return next;
     };
-    auto prevIt = [&polygon](const auto& it) {
-        if (it == polygon.begin())
-            std::prev(polygon.end());
+    auto prevIt = [&ring](const auto& it) {
+        if (it == ring.begin())
+            std::prev(ring.end());
         return std::prev(it);
     };
+    auto removeEmptyLoops = [&](auto a) {
+        bool changed = true;
+        while (changed && ring.size() > 3) {
+            changed = false;
+            auto b = nextIt(a); auto c = nextIt(b);
+            if (*a == *c) {
+                ring.erase(b); ring.erase(c);
+                changed = true;
+            }
+            if (ring.size() < 3)
+                return a;
+            b = prevIt(a); c = nextIt(a);
+            if (*b == *c) {
+                ring.erase(a); ring.erase(c);
+                a = b;
+                changed = true;
+            }
+            if (ring.size() < 3)
+                return a;
+            b = prevIt(a); c = prevIt(b);
+            if (*c == *a) {
+                ring.erase(a); ring.erase(b);
+                a = c;
+                changed = true;
+            }
+        }
 
+        return a;
+    };
+    for (auto it = ring.begin(); it != ring.end(); ++it) {
+        it = removeEmptyLoops(it);
+    }
+
+    if (ring.size() < 3)
+        return {};
+
+    auto ringRotation = details::ringDirection(ring);
     std::vector<Triangle> result;
-    result.reserve(polygon.size() - 2);
+    result.reserve(ring.size() - 2);
     using namespace details;
-    auto a = polygon.begin();
+    auto a = ring.begin();
     size_t counter = 0;
-    while (polygon.size() > 2 && counter < polygon.size()) {
+    while (ring.size() > 2/* && counter < polygon.size()*/) {
+        a = removeEmptyLoops(a);
         counter++;
         auto b = nextIt(a);
         auto c = nextIt(b);
-        std::cerr << "Triangle: " << getPointInd(*a) << '-' << getPointInd(*b) << '-' << getPointInd(*c) << '\n';
+        trace() << "Triangle: " << getPointInd(*a) << '-' << getPointInd(*b) << '-' << getPointInd(*c) << '\n';
 
         Triangle t{*a, *b, *c};
-        if (signedArea(t) == 0) {
-            std::cerr << "Zero area. Skip\n";
-            a = nextIt(a);
-            continue;
-        }
-
         bool isEar = triangleDirection(t) == ringRotation;
         if (isEar) {
-            std::cerr << "Ear rotation. ";
+            trace() << "Ear rotation. ";
             for (auto vIt = nextIt(c); vIt != a; vIt = nextIt(vIt)) {
                 Point& p = *vIt;
                 if (pointInTriangle(t, p)) {
                     isEar = false;
-                    std::cerr << "Contains other points. ";
+                    trace() << "Contains other points. ";
                     break;
                 }
             }
         }
 
-        auto removeEmptyLoops = [&](auto a) {
-            bool changed = true;
-            while (changed && polygon.size() > 3) {
-                changed = false;
-                auto b = nextIt(a); auto c = nextIt(b);
-                if (*a == *c) {
-                    polygon.erase(b);
-                    polygon.erase(c);
-                    changed = true;
-                }
-                if (polygon.size() < 3)
-                    return a;
-                b = prevIt(a); c = nextIt(a);
-                if (*b == *c) {
-                    polygon.erase(a);
-                    polygon.erase(c);
-                    a = b;
-                    changed = true;
-                }
-                if (polygon.size() < 3)
-                    return a;
-                b = prevIt(a); c = prevIt(b);
-                if (*c == *a) {
-                    polygon.erase(a);
-                    polygon.erase(b);
-                    a = c;
-                    changed = true;
-                }
-            }
-
-            return a;
-        };
-
         if (isEar) {
-            std::cerr << "clip!\n";
+            trace() << "clip.\n";
             result.push_back(t);
-            polygon.erase(b);
-            a = removeEmptyLoops(a);
-            a = nextIt(a);
+            ring.erase(b);
             counter = 0;
         } else {
-            std::cerr << "skip\n";
+            trace() << "skip.\n";
             a = nextIt(a);
         }
     }
@@ -162,7 +164,6 @@ std::vector<Triangle> triangulate(Ring polygon)
 }
 
 namespace details {
-
 
 Direction ringDirection(const Ring& ring)
 {
@@ -200,7 +201,7 @@ Direction triangleDirection(const ear_clip::Triangle& triangle)
     const Point& c = triangle[2];
     double area = signedArea(a, b, c);
     if (area == 0.0)
-        throw std::invalid_argument("Invalid triangle");
+        return Direction::NO_AREA;
 
     return area > 0 ? Direction::CWISE : Direction::CCWISE;
 }
@@ -274,9 +275,9 @@ Ring normalizeRing(Ring ring)
         getPointInd(ring.front()), getPointInd(ring.back()));
     edges.emplace_back(args);
 
-    std::cerr << "Building graph:\n";
+    trace() << "Building graph:\n";
     for (const auto e: edges) {
-        std::cerr << "Edge: " <<  e->first << '-' << e->second << '\n';
+        trace() << "Edge: " <<  e->first << '-' << e->second << '\n';
     }
 
     std::map<size_t, std::vector<Point>> edgeToSplitPoints;
@@ -295,12 +296,12 @@ Ring normalizeRing(Ring ring)
         }
     }
 
-    std::cerr << "Nodes:\n";
+    trace() << "Nodes:\n";
     for (size_t i = 0; i < nodes.size(); ++i) {
-        std::cerr << i << ": (" << nodes[i] << ")\n";
+        trace() << i << ": (" << nodes[i] << ")\n";
     }
 
-    std::cerr << "Splitting edges:\n";
+    trace() << "Splitting edges:\n";
     std::vector<Point> points;
     for(const auto& [edge, splitPoints]: edgeToSplitPoints) {
         points.clear();
@@ -312,10 +313,10 @@ Ring normalizeRing(Ring ring)
 
         edges[edge] = std::nullopt;
 
-        std::cerr << edges[edge]->first << '-' << edges[edge]->second << " to:\n";
+        trace() << edges[edge]->first << '-' << edges[edge]->second << " to:\n";
         for (auto b = points.begin(), e = std::next(points.begin()); e != points.end(); b++, e++) {
             edges.emplace_back(std::make_pair(getPointInd(*b), getPointInd(*e)));
-            std::cerr << edges.back()->first << '-' << edges.back()->second << '\n';
+            trace() << edges.back()->first << '-' << edges.back()->second << '\n';
         }
     }
 
@@ -332,7 +333,7 @@ Ring normalizeRing(Ring ring)
     }
 
     size_t startPointId = getPointInd(mostLeft);
-    std::cerr << "Start node: " << startPointId << '\n';
+    trace() << "Start node: " << startPointId << '\n';
     {   // setup traverse order
         auto fakeNode = mostLeft; // first node for dfs
         fakeNode.x = std::numeric_limits<double>::lowest(); // shift left
@@ -367,7 +368,7 @@ Ring normalizeRing(Ring ring)
             }
         }
 
-        std::cerr << "Debug order: " << debugOrder << '\n';
+        trace() << "Debug order: " << debugOrder << '\n';
     }
 
     std::vector<size_t> traverseOrder;
@@ -400,7 +401,7 @@ Ring normalizeRing(Ring ring)
     for (auto id: traverseOrder)
         ring.push_back(nodes[id]);
 
-    std::cerr << "Traverse order: " << traverseOrder << '\n';
+    trace() << "Traverse order: " << traverseOrder << '\n';
 
     return ring;
 }

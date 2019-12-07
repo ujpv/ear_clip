@@ -17,7 +17,9 @@ struct Point {
 using Triangle = std::array<Point, 3>;
 using Ring = std::list<Point>;
 
-std::vector<Triangle> triangulate(Ring polygon);
+void enableTrace(bool enable);
+
+std::vector<Triangle> triangulate(Ring ring);
 
 namespace details {
 
