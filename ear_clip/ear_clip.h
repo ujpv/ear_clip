@@ -29,9 +29,7 @@ enum class Direction {
 
 Direction ringDirection(const Ring& ring);
 Direction triangleDirection(const Triangle& triangle);
-Ring normalizePolygon(Ring ring);
-
-Ring selfIntersect(Ring ring);
+Ring normalizeRing(Ring ring);
 
 bool intersects(Point a, Point b, Point c, Point d);
 Point intersection(Point a, Point b, Point c, Point d);

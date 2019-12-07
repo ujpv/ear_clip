@@ -58,11 +58,9 @@ double signedArea(const Triangle& t)
 
 std::vector<Triangle> triangulate(Ring polygon)
 {
-    std::cerr << "Src polygon: " << polygon << '\n';
-    polygon = details::normalizePolygon(std::move(polygon));
+    std::cerr << "Src  polygon: " << polygon << '\n';
+    polygon = details::normalizeRing(std::move(polygon));
     std::cerr << "Norm polygon: " << polygon << '\n';
-    polygon = details::selfIntersect(std::move(polygon));
-    std::cerr << "Prep polygon: " << polygon << '\n';
 
     if (polygon.empty())
         return {};
@@ -212,25 +210,14 @@ bool pointInTriangle(const Triangle& t, Point p)
     if (p == t[0] || p == t[1] || p == t[2])
         return false;
 
-    const Point& a = t[0];
-    const Point& b = t[1];
-    const Point& c = t[2];
-    return (c.x - p.x) * (a.y - p.y) - (a.x - p.x) * (c.y - p.y) >= 0 &&
-           (a.x - p.x) * (b.y - p.y) - (b.x - p.x) * (a.y - p.y) >= 0 &&
-           (b.x - p.x) * (c.y - p.y) - (c.x - p.x) * (b.y - p.y) >= 0;
-}
+    double d1 = signedArea(p, t[0], t[1]);
+    double d2 = signedArea(p, t[1], t[2]);
+    double d3 = signedArea(p, t[2], t[0]);
 
-Ring normalizePolygon(Ring ring)
-{
-    if (ring.empty())
-        return ring;
-    if (ring.size() < 3)
-        throw std::invalid_argument("It's not a polygon");
+    bool hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+    bool hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
 
-    if (ring.back() == ring.front())
-        ring.pop_back();
-
-    return ring;
+    return !(hasNeg && hasPos);
 }
 
 bool intersects(Point a, Point b, Point c, Point d)
@@ -258,10 +245,14 @@ Point intersection(Point a, Point b, Point c, Point d)
     return {x, y};
 }
 
-Ring selfIntersect(Ring ring)
+Ring normalizeRing(Ring ring)
 {
-    if (ring.size() < 3)
+    if (ring.empty())
         return ring;
+    else if (ring.size() == 1)
+        std::invalid_argument("It's not a polygon");
+    else if (ring.back() == ring.front())
+        ring.pop_back();
 
     nodes.reserve(ring.size());
 

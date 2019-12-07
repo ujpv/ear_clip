@@ -147,10 +147,10 @@ bool testIntersects(ec::Point a, ec::Point b, ec::Point c, ec::Point d, bool exp
     return !ok;
 }
 
-bool testSelfIntersect(ec::Ring ring, const ec::Ring& expected)
+bool testNormalize(ec::Ring ring, const ec::Ring& expected)
 {
     std::cout << "Test self-intersect: " << ring << ": ";
-    ring = ecd::selfIntersect(std::move(ring));
+    ring = ecd::normalizeRing(std::move(ring));
     bool ok = (ring == expected);
     if (ok) {
         std::cout << "Ok\n";
@@ -212,6 +212,8 @@ size_t testPointInTriangle() {
         {{{{0,1}, {0, 0}, {0, 1}}}, {100, 100}, false},
         {{{{0,0}, {1, 0}, {0.5, 10}}}, {0.5, 0.5}, true},
         {{{{0,0}, {0.5, 10}, {1, 0}}}, {0.5, 0.5}, true},
+        {{{{0,0}, {1, 0}, {0, 1}}}, {0.5, 0}, true},
+        {{{{0,0}, {0, 1}, {1, 0}}}, {0.5, 0}, true},
     }};
     size_t failedCount = 0;
     for (size_t i = 0; i < CASES.size(); ++i) {
@@ -245,29 +247,34 @@ int main()
     failed += testIntersects({0, 0}, {0, 1}, {0, 1}, {1, 1}, false);
     failed += testIntersects({0, 0}, {2, 0}, {1, 1}, {1, 0}, false);
 
+    failed += testPointInTriangle();
+
     failed += testAngle();
 
     const ec::Ring simplestRing = {{{0, 0}, {1, 0}, {0, 1}}};
     const ec::Ring repeatPoint = {{{0, 0}, {1, 0}, {1, 0}, {0, 1}}};
     const ec::Ring ring8 = {{{0, 0}, {1, 0}, {0, 1}, {1, 1}}};
     const ec::Ring ringM = {{{1, 1}, {3, 3}, {5, 1}, {5, 2}, {1, 2}}};
+    const ec::Ring ringCross = {{{-1, -2}, { 1, -2}, {0, 0},
+                                 {-2,  1}, {-1,  2}, {0, 0},
+                                 { 2,  1}, { 1,  2}, {0, 0}}};
 
-    failed += testSelfIntersect(simplestRing, {{{1, 0}, {0, 1}, {0, 0}}});
-    // repeat point
-    failed += testSelfIntersect(repeatPoint, {{{1, 0}, {0, 1}, {0, 0}}});
-    // 8-test
-    failed += testSelfIntersect(ring8, {{1, 0}, {0.5, 0.5}, {1, 1}, {0, 1}, {0.5, 0.5}, {0, 0}});
-    // M-test
-    failed += testSelfIntersect(ringM, {{2, 2}, {4, 2}, {5, 1}, {5, 2}, {4, 2}, {3, 3}, {2, 2}, {1, 2}, {1, 1}});
+    const ec::Ring zeroAreaLoop = {{{0, 0}, {1, 0}, {0, 0}}};
+    const ec::Ring zeroAreaLoopStart = {{{ 0, -1}, {0, 0},
+                                         { 1,  1}, {0, 0},
+                                         {-1,  1}, {0, 0}}};
 
-// We are here
-//    failed += testSelfIntersect({{{0, -1}, {1, 0}, {0, 1}, {1, -1}}}, {{}});
-//    testTriangulate({{{0, -1}, {1, 0}, {0, 1}, {1, -1}}}, {{}});
-//    testTriangulate({{{0, 0}, {1, 0}, {0, 1}, {1, 1}}}, {{}});
-//    failed += testSelfIntersect({{{5, 2}, {10, 2}, {50, 50}, {91, 47}}}, {});
-//    failed += testSelfIntersect({{0, 0}, {1, 0}, {0, 1}}, {{0, 1}, {0, 0}, {1, 0}});
-    failed += testPointInTriangle();
-//    failed += testSelfIntersect({{{0, 8}, {7, 12}, {6, 0}, {10, 7}}}, {{}});
+    failed += testNormalize(simplestRing, {{{1, 0}, {0, 1}, {0, 0}}});
+    failed += testNormalize(repeatPoint, {{{1, 0}, {0, 1}, {0, 0}}});
+    failed += testNormalize(ring8, {{1, 0}, {0.5, 0.5}, {1, 1}, {0, 1}, {0.5, 0.5}, {0, 0}});
+    failed += testNormalize(ringM, {{2, 2}, {4, 2}, {5, 1}, {5, 2}, {4, 2}, {3, 3}, {2, 2}, {1, 2}, {1, 1}});
+    failed += testNormalize(ringCross,
+                            {{0, 0}, {-1, -2}, {1, -2}, {0, 0}, {2, 1}, {1, 2}, {0, 0}, {-1, 2}, {-2, 1}});
+
+    failed += testNormalize(zeroAreaLoop, {{1, 0}, {0, 0}});
+    failed += testNormalize(zeroAreaLoopStart,
+                            {{0, 0}, {0, -1}, {0, 0}, {1, 1}, {0, 0}, {-1, 1}});
+
 
     if (failed == 0) {
         std::cout << "All test passed\n";
