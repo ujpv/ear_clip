@@ -127,8 +127,16 @@ std::vector<Triangle> triangulate(Ring ring)
     result.reserve(ring.size() - 2);
     using namespace details;
     auto a = ring.begin();
-    while (ring.size() > 2) {
-        a = removeEmptyLoops(a);
+    size_t counter = 0;
+    while (ring.size() > 2 && counter < ring.size()) {
+        counter++;
+        {
+            auto size = ring.size();
+            a = removeEmptyLoops(a);
+            if (size != ring.size())
+                counter = 0;
+        }
+
         auto b = nextIt(a);
         auto c = nextIt(b);
         trace() << "Triangle: " << getPointInd(*a) << '-' << getPointInd(*b) << '-' << getPointInd(*c) << '\n';
@@ -157,6 +165,7 @@ std::vector<Triangle> triangulate(Ring ring)
             trace() << "clip.\n";
             result.push_back(t);
             ring.erase(b);
+            counter = 0;
         } else {
             trace() << "skip.\n";
             a = nextIt(a);
