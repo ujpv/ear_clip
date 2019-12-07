@@ -16,6 +16,7 @@ void Triangulation::run()
 
     std::vector<ear_clip::Triangle> triangulation;
     try {
+        ear_clip::enableTrace(true);
         triangulation = ear_clip::triangulate(std::move(polygon));
         error = std::nullopt;
     } catch (const std::exception& e) {

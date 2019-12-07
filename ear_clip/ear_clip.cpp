@@ -68,9 +68,9 @@ void enableTrace(bool enable)
 
 std::vector<Triangle> triangulate(Ring ring)
 {
-    trace() << "Src  polygon: " << ring << '\n';
+    trace() << "Src  ring: " << ring << '\n';
     ring = details::normalizeRing(std::move(ring));
-    trace() << "Norm polygon: " << ring << '\n';
+    trace() << "Norm ring: " << ring << '\n';
 
     if (ring.size() < 3)
         return {};
@@ -127,16 +127,20 @@ std::vector<Triangle> triangulate(Ring ring)
     result.reserve(ring.size() - 2);
     using namespace details;
     auto a = ring.begin();
-    size_t counter = 0;
-    while (ring.size() > 2/* && counter < polygon.size()*/) {
+    while (ring.size() > 2) {
         a = removeEmptyLoops(a);
-        counter++;
         auto b = nextIt(a);
         auto c = nextIt(b);
         trace() << "Triangle: " << getPointInd(*a) << '-' << getPointInd(*b) << '-' << getPointInd(*c) << '\n';
 
         Triangle t{*a, *b, *c};
-        bool isEar = triangleDirection(t) == ringRotation;
+        auto triangleRot = triangleDirection(t);
+        if (triangleRot == Direction::NO_AREA) {// Triangle - line (ex. 0 0, 1 1, 2 2)
+            a = nextIt(a);
+            continue;
+        }
+
+        bool isEar = triangleRot == ringRotation;
         if (isEar) {
             trace() << "Ear rotation. ";
             for (auto vIt = nextIt(c); vIt != a; vIt = nextIt(vIt)) {
@@ -153,7 +157,6 @@ std::vector<Triangle> triangulate(Ring ring)
             trace() << "clip.\n";
             result.push_back(t);
             ring.erase(b);
-            counter = 0;
         } else {
             trace() << "skip.\n";
             a = nextIt(a);
@@ -248,15 +251,14 @@ Point intersection(Point a, Point b, Point c, Point d)
 
 Ring normalizeRing(Ring ring)
 {
-    if (ring.empty())
+    if (ring.size() < 2)
         return ring;
-    else if (ring.size() == 1)
-        throw std::invalid_argument("It's not a polygon");
-    else if (ring.back() == ring.front()) {
+    if (ring.back() == ring.front()) {
         ring.pop_back();
         if (ring.size() == 1)
-            throw std::invalid_argument("It's not a polygon");
+            return {};
     }
+
     nodes.reserve(ring.size());
 
     // for debug. remove it
