@@ -250,10 +250,12 @@ Ring normalizeRing(Ring ring)
     if (ring.empty())
         return ring;
     else if (ring.size() == 1)
-        std::invalid_argument("It's not a polygon");
-    else if (ring.back() == ring.front())
+        throw std::invalid_argument("It's not a polygon");
+    else if (ring.back() == ring.front()) {
         ring.pop_back();
-
+        if (ring.size() == 1)
+            throw std::invalid_argument("It's not a polygon");
+    }
     nodes.reserve(ring.size());
 
     // for debug. remove it

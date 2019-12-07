@@ -260,6 +260,8 @@ int main()
                                  { 2,  1}, { 1,  2}, {0, 0}}};
 
     const ec::Ring zeroAreaLoop = {{{0, 0}, {1, 0}, {0, 0}}};
+    const ec::Ring zeroAreaLoop2 = {{{0, 0}, {1, 0}, {2, 0}, {1, 0}}};
+    const ec::Ring zeroAreaLoop3 = {{{0, 0}, {1, 0}, {2, 0}, {3, 0}, {2, 0},{1, 0}}};
     const ec::Ring zeroAreaLoopStart = {{{ 0, -1}, {0, 0},
                                          { 1,  1}, {0, 0},
                                          {-1,  1}, {0, 0}}};
@@ -272,8 +274,15 @@ int main()
                             {{0, 0}, {-1, -2}, {1, -2}, {0, 0}, {2, 1}, {1, 2}, {0, 0}, {-1, 2}, {-2, 1}});
 
     failed += testNormalize(zeroAreaLoop, {{1, 0}, {0, 0}});
+    failed += testNormalize(zeroAreaLoop2, {{1, 0}, {2, 0}, {1, 0}, {0, 0}});
+    failed += testNormalize(zeroAreaLoop3, {{1, 0}, {2, 0}, {3, 0}, {2, 0}, {1, 0}, {0, 0}});
     failed += testNormalize(zeroAreaLoopStart,
                             {{0, 0}, {0, -1}, {0, 0}, {1, 1}, {0, 0}, {-1, 1}});
+
+    failed += testTriangulate(zeroAreaLoop, {});
+    failed += testTriangulate(zeroAreaLoop2, {});
+    failed += testTriangulate(zeroAreaLoop3, {});
+    failed += testTriangulate(zeroAreaLoopStart, {});
 
 
     if (failed == 0) {

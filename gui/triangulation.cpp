@@ -14,8 +14,16 @@ void Triangulation::run()
         }
     }
 
+    std::vector<ear_clip::Triangle> triangulation;
+    try {
+        triangulation = ear_clip::triangulate(std::move(polygon));
+        error = std::nullopt;
+    } catch (const std::exception& e) {
+        error = e.what();
+    }
+
     auto newTriangles = std::make_shared<QVector<Triangle>>();
-    for (auto t: ear_clip::triangulate(polygon)) {
+    for (const auto& t: triangulation) {
         newTriangles->push_back({{t[0].x, t[0].y},
                                  {t[1].x, t[1].y},
                                  {t[2].x, t[2].y},
@@ -44,6 +52,7 @@ void Triangulation::reset()
 {
     triangles.reset();
     ring_.reset();
+    error = std::nullopt;
 }
 
 void Triangulation::setRing(Triangulation::Ring newPolygon)
@@ -51,4 +60,9 @@ void Triangulation::setRing(Triangulation::Ring newPolygon)
     auto polygon = std::make_shared<Ring>();
     *polygon = std::move(newPolygon);
     ring_ = polygon;
+}
+
+std::optional<std::string> Triangulation::getError() const
+{
+    return error;
 }

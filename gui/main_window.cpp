@@ -2,6 +2,7 @@
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QMessageBox>
 
 MainWindow::MainWindow(PolygonBuilder* polygonBuilder, Triangulation* triangulation, QWidget* p)
     : QWidget(p)
@@ -65,6 +66,14 @@ MainWindow::MainWindow(PolygonBuilder* polygonBuilder, Triangulation* triangulat
     connect(resetViewPB, SIGNAL(clicked()), paintArea, SLOT(resetView()));
 
     updateState(polygonBuilder->getState());
+
+    connect(triangulation, &QThread::finished, this, [=]() {
+        if (auto error = triangulation->getError()) {
+            QMessageBox messageBox;
+            messageBox.setText(error->c_str());
+            messageBox.exec();
+        }
+    });
 }
 
 void MainWindow::updateState(PolygonBuilder::State state)
