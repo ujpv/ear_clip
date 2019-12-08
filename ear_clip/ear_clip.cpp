@@ -13,19 +13,6 @@ namespace ear_clip {
 
 namespace {
 
-std::vector<Point> nodes;
-std::map<Point, size_t> pointToNode;
-auto getPointInd = [](Point p) {
-    if (auto it = pointToNode.find(p); it != pointToNode.end()) {
-        return it->second;
-    }
-
-    auto ind = nodes.size();
-    nodes.push_back(p);
-    pointToNode[p] = ind;
-    return ind;
-};
-
 std::ostream& operator<<(std::ostream& s, const Point& point) {
     s << point.x << ' ' << point.y;
     return s;
@@ -48,7 +35,7 @@ std::ostream& operator<<(std::ostream& s, const std::vector<T>& v) {
 
 bool traceEnabled = true;
 
-class NullStream : public std::fstream {
+class NullStream : public std::ofstream {
 public:
     NullStream() { setstate(std::ios_base::badbit); }
 };
@@ -112,9 +99,9 @@ std::vector<Triangle> triangulate(Ring ring)
                 changed = true;
             }
         }
-
         return a;
     };
+
     for (auto it = ring.begin(); it != ring.end(); ++it) {
         it = removeEmptyLoops(it);
     }
@@ -133,17 +120,20 @@ std::vector<Triangle> triangulate(Ring ring)
         {
             auto size = ring.size();
             a = removeEmptyLoops(a);
-            if (size != ring.size())
+            if (size != ring.size()) {
                 counter = 0;
+                trace() << "Removed " << size - ring.size() << " empty loops\n" ;
+            }
         }
 
         auto b = nextIt(a);
         auto c = nextIt(b);
-        trace() << "Triangle: " << getPointInd(*a) << '-' << getPointInd(*b) << '-' << getPointInd(*c) << '\n';
+
+        trace() << "Triangle: (" << *a << ")-(" << *b << ")-(" << *c << ")\n";
 
         Triangle t{*a, *b, *c};
         auto triangleRot = triangleDirection(t);
-        if (triangleRot == Direction::NO_AREA) {// Triangle - line (ex. 0 0, 1 1, 2 2)
+        if (triangleRot == Direction::NO_AREA) { // Triangle - line (ex. 0 0, 1 1, 2 2)
             a = nextIt(a);
             continue;
         }
@@ -152,7 +142,7 @@ std::vector<Triangle> triangulate(Ring ring)
         if (isEar) {
             trace() << "Ear rotation. ";
             for (auto vIt = nextIt(c); vIt != a; vIt = nextIt(vIt)) {
-                Point& p = *vIt;
+                const Point& p = *vIt;
                 if (pointInTriangle(t, p)) {
                     isEar = false;
                     trace() << "Contains other points. ";
@@ -208,10 +198,7 @@ double signedArea(const Point& a, const Point& b, const Point& c)
 
 Direction triangleDirection(const ear_clip::Triangle& triangle)
 {
-    const Point& a = triangle[0];
-    const Point& b = triangle[1];
-    const Point& c = triangle[2];
-    double area = signedArea(a, b, c);
+    double area = signedArea(triangle[0], triangle[1], triangle[2]);
     if (area == 0.0)
         return Direction::NO_AREA;
 
@@ -233,6 +220,7 @@ bool pointInTriangle(const Triangle& t, Point p)
     return !(hasNeg && hasPos);
 }
 
+// intersects, but not at end points
 bool intersects(Point a, Point b, Point c, Point d)
 {
     return signedArea(a, b, c) * signedArea(a, b, d) < 0 &&
@@ -267,6 +255,18 @@ Ring normalizeRing(Ring ring)
         if (ring.size() == 1)
             return {};
     }
+    std::vector<Point> nodes;
+    std::map<Point, size_t> pointToNode;
+    auto getPointInd = [&](Point p) {
+        if (auto it = pointToNode.find(p); it != pointToNode.end()) {
+            return it->second;
+        }
+
+        auto ind = nodes.size();
+        nodes.push_back(p);
+        pointToNode[p] = ind;
+        return ind;
+    };
 
     nodes.reserve(ring.size());
 
@@ -430,6 +430,19 @@ double angleRad(Point a, Point b, Point c)
     return angle;
 }
 
+}
+
+auto Point::tie() const
+{
+    return std::tie(x, y); }
+
+bool Point::operator==(const Point& other) const
+{
+    return tie() == other.tie(); }
+
+bool Point::operator<(const Point& other) const
+{
+    return tie() < other.tie();
 }
 
 }

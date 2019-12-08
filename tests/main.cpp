@@ -10,7 +10,8 @@
 namespace ec = ear_clip;
 namespace ecd = ear_clip::details;
 
-inline std::ostream& operator<<(std::ostream& s, ecd::Direction direction) {
+inline std::ostream& operator<<(std::ostream& s, ecd::Direction direction)
+{
     static const std::map<ecd::Direction, std::string> DIRS = {
         {ecd::Direction::CWISE,  "Clockwise"},
         {ecd::Direction::CCWISE, "Counter clockwise"},
@@ -20,17 +21,20 @@ inline std::ostream& operator<<(std::ostream& s, ecd::Direction direction) {
     return s;
 }
 
-inline std::ostream& operator<<(std::ostream& s, const ec::Point& p) {
+inline std::ostream& operator<<(std::ostream& s, const ec::Point& p)
+{
     s << "{" << p.x << ", " << p.y << "}";
     return s;
 }
 
-inline std::ostream& operator<<(std::ostream& s, const ec::Triangle& t) {
+inline std::ostream& operator<<(std::ostream& s, const ec::Triangle& t)
+{
     s << "{{" << t[0] << ", " << t[1] << ", " << t[2] << "}}";
     return s;
 }
 
-inline std::ostream& operator<<(std::ostream& s, const ec::Ring& r) {
+inline std::ostream& operator<<(std::ostream& s, const ec::Ring& r)
+{
     s << "{";
     bool putComma = false;
     for (const auto& p: r) {
@@ -44,7 +48,8 @@ inline std::ostream& operator<<(std::ostream& s, const ec::Ring& r) {
     return s;
 }
 
-inline std::ostream& operator<<(std::ostream& s, const std::vector<ec::Triangle>& r) {
+inline std::ostream& operator<<(std::ostream& s, const std::vector<ec::Triangle>& r)
+{
     s << "{";
     bool putComma = false;
     for (const auto& p: r) {
@@ -60,7 +65,8 @@ inline std::ostream& operator<<(std::ostream& s, const std::vector<ec::Triangle>
     return s;
 }
 
-bool expectEqual(double a, double b) {
+bool expectEqual(double a, double b)
+{
     constexpr double EPS = 0.00001;
     bool equal = std::abs(a - b) <= std::max(std::abs(a), std::abs(b)) * EPS;
     if (!equal)
@@ -69,7 +75,8 @@ bool expectEqual(double a, double b) {
     return equal;
 }
 
-bool expectEqual(ec::Point a, ec::Point b) {
+bool expectEqual(ec::Point a, ec::Point b)
+{
     bool equal = expectEqual(a.x, b.x) && expectEqual(a.y, b.y);
     if (!equal)
         std::cout << "Test failed: " << a << " != " << b << '\n';
@@ -77,7 +84,8 @@ bool expectEqual(ec::Point a, ec::Point b) {
     return equal;
 }
 
-bool expectEqual(ec::Triangle a, ec::Triangle b) {
+bool expectEqual(ec::Triangle a, ec::Triangle b)
+{
     std::sort(a.begin(), a.end());
     std::sort(b.begin(), b.end());
     bool equal = true;
@@ -89,7 +97,8 @@ bool expectEqual(ec::Triangle a, ec::Triangle b) {
     return equal;
 }
 
-bool expectEqual(std::vector<ec::Triangle> a, std::vector<ec::Triangle> b) {
+bool expectEqual(std::vector<ec::Triangle> a, std::vector<ec::Triangle> b)
+{
     if (a.size() != b.size()) {
         std::cout << "Test failed: " << a << " != " << b << '\n';
         return false;
@@ -181,7 +190,6 @@ bool testNormalize(ec::Ring ring, const ec::Ring& expected)
 
     return !ok;
 }
-
 
 ec::Point rotate(ec::Point p, double a)
 {

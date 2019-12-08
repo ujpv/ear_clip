@@ -9,9 +9,9 @@ namespace ear_clip {
 
 struct Point {
     double x, y;
-    [[nodiscard]] auto tie() const { return std::tie(x, y); }
-    bool operator==(const Point& other) const { return tie() == other.tie(); };
-    bool operator<(const Point& other) const { return tie() < other.tie(); }
+    [[nodiscard]] auto tie() const;
+    bool operator==(const Point& other) const;;
+    bool operator<(const Point& other) const;
 };
 
 using Triangle = std::array<Point, 3>;
