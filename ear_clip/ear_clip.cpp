@@ -35,14 +35,18 @@ std::ostream& operator<<(std::ostream& s, const std::vector<T>& v) {
 
 bool traceEnabled = true;
 
-class NullStream : public std::ofstream {
-public:
-    NullStream() { setstate(std::ios_base::badbit); }
-};
 
 std::ostream& trace()
 {
-    static NullStream nullStream;
+    class NullBuffer : public std::streambuf
+    {
+    public:
+        int overflow(int c) { return c; }
+    };
+
+    static NullBuffer nullBuffer;
+    static std::ostream nullStream(&nullBuffer);
+
     return traceEnabled ? std::cerr : nullStream;
 }
 
