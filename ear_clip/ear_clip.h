@@ -23,14 +23,14 @@ std::vector<Triangle> triangulate(Ring ring);
 
 namespace details {
 
-enum class Direction {
+enum class VertexOrder {
   CLOCKWISE,
   C_CLOCKWISE,
   NO_AREA
 };
 
-Direction ringDirection(const Ring &ring);
-Direction triangleDirection(const Triangle &triangle);
+VertexOrder vertexOrder(const Ring &ring);
+VertexOrder vertexOrder(const Triangle &triangle);
 Ring normalizeRing(Ring ring);
 
 bool intersects(Point a, Point b, Point c, Point d);

@@ -10,11 +10,11 @@
 namespace ec = ear_clip;
 namespace ecd = ear_clip::details;
 
-inline std::ostream &operator<<(std::ostream &s, ecd::Direction direction) {
-  static const std::map<ecd::Direction, std::string> DIRS = {
-      {ecd::Direction::CLOCKWISE, "Clockwise"},
-      {ecd::Direction::C_CLOCKWISE, "Counter clockwise"},
-      {ecd::Direction::NO_AREA, "No area"},
+inline std::ostream &operator<<(std::ostream &s, ecd::VertexOrder direction) {
+  static const std::map<ecd::VertexOrder, std::string> DIRS = {
+      {ecd::VertexOrder::CLOCKWISE, "Clockwise"},
+      {ecd::VertexOrder::C_CLOCKWISE, "Counter clockwise"},
+      {ecd::VertexOrder::NO_AREA, "No area"},
   };
   s << DIRS.at(direction);
   return s;
@@ -126,13 +126,13 @@ bool expectEqual(const ec::Ring &a, const ec::Ring &b) {
   return equal;
 }
 
-bool testRingRotation(ec::Ring r, ecd::Direction dir_tar) {
-  std::cout << "Test ring rotation. Direction: " << dir_tar << '\n';
+bool testRingRotation(ec::Ring r, ecd::VertexOrder dir_tar) {
+  std::cout << "Test ring rotation. VertexOrder: " << dir_tar << '\n';
   bool failed = false;
   for (size_t i = 0; i < r.size(); ++i) {
     std::rotate(r.begin(), std::next(r.begin()), r.end());
     std::cout << "Test ring " << r << ": ";
-    auto dir = ecd::ringDirection(r);
+    auto dir = ecd::vertexOrder(r);
     bool ok = dir == dir_tar;
     std::cout << (ok ? "OK" : "Failed") << '\n';
     failed |= !ok;
@@ -252,10 +252,10 @@ int main() {
   size_t failed = 0;
   ec::enableTrace(false);
 
-  failed += testRingRotation({{{0, 0}, {0, 1}, {1, 0}}}, ecd::Direction::CLOCKWISE);
-  failed += testRingRotation({{{0, 0}, {1, 0}, {0, 1}}}, ecd::Direction::C_CLOCKWISE);
-  failed += testRingRotation({{{0, 0}, {1, 0}, {2, 0}}}, ecd::Direction::NO_AREA);
-  failed += testRingRotation({{{0, 0}, {1, 0}, {0, 0}}}, ecd::Direction::NO_AREA);
+  failed += testRingRotation({{{0, 0}, {0, 1}, {1, 0}}}, ecd::VertexOrder::CLOCKWISE);
+  failed += testRingRotation({{{0, 0}, {1, 0}, {0, 1}}}, ecd::VertexOrder::C_CLOCKWISE);
+  failed += testRingRotation({{{0, 0}, {1, 0}, {2, 0}}}, ecd::VertexOrder::NO_AREA);
+  failed += testRingRotation({{{0, 0}, {1, 0}, {0, 0}}}, ecd::VertexOrder::NO_AREA);
 
   failed += testIntersects({0, 0}, {1, 1}, {0, 1}, {1, 0}, true);
   failed += testIntersects({0, 0}, {0, 1}, {1, 1}, {1, 1}, false);

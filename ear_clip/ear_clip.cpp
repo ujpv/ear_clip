@@ -111,7 +111,7 @@ std::vector<Triangle> triangulate(Ring ring) {
   if (ring.size() < 3)
     return {};
 
-  auto ringRotation = details::ringDirection(ring);
+  auto ringVertexOrder = details::vertexOrder(ring);
   std::vector<Triangle> result;
   result.reserve(ring.size() - 2);
   using namespace details;
@@ -134,13 +134,13 @@ std::vector<Triangle> triangulate(Ring ring) {
     trace() << "Triangle: (" << *a << ")-(" << *b << ")-(" << *c << ")\n";
 
     Triangle t{*a, *b, *c};
-    auto triangleRot = triangleDirection(t);
-    if (triangleRot == Direction::NO_AREA) { // Triangle - line (ex. 0 0, 1 1, 2 2)
+    auto triangleVertexOrder = vertexOrder(t);
+    if (triangleVertexOrder == VertexOrder::NO_AREA) { // Triangle - line (ex. 0 0, 1 1, 2 2)
       a = nextIt(a);
       continue;
     }
 
-    bool isEar = triangleRot == ringRotation;
+    bool isEar = triangleVertexOrder == ringVertexOrder;
     if (isEar) {
       trace() << "Ear rotation. ";
       for (auto vIt = nextIt(c); vIt != a; vIt = nextIt(vIt)) {
@@ -169,40 +169,37 @@ std::vector<Triangle> triangulate(Ring ring) {
 
 namespace details {
 
-Direction ringDirection(const Ring &ring) {
+namespace {
+double signedArea(const Point &a, const Point &b, const Point &c) {
+  auto area = (c.y - b.y) * (a.x - c.x) - (c.x - b.x) * (a.y - c.y);
+  return area;
+}
+} // namespace
+
+VertexOrder vertexOrder(const Ring &ring) {
   if (ring.size() < 3)
     throw std::invalid_argument("Ring has less than 3 points");
 
   auto highest = std::max_element(ring.begin(), ring.end(),
                                   [](auto l, auto r) { return l.y < r.y; });
 
-  auto prev = highest == ring.begin() ?
-              std::prev(ring.end(), 1) : std::prev(highest);
-
+  auto prev = highest == ring.begin() ? std::prev(ring.end()) : std::prev(highest);
   auto next = std::next(highest);
   if (next == ring.end())
     next = ring.begin();
 
   Triangle triangle = {*prev, *highest, *next};
-  return triangleDirection(triangle);
+  return vertexOrder(triangle);
 }
 
-namespace {
-
-double signedArea(const Point &a, const Point &b, const Point &c) {
-  auto area = (c.y - b.y) * (a.x - c.x) - (c.x - b.x) * (a.y - c.y);
-  return area;
-}
-
-}
-
-Direction triangleDirection(const ear_clip::Triangle &triangle) {
+VertexOrder vertexOrder(const ear_clip::Triangle &triangle) {
   double area = signedArea(triangle[0], triangle[1], triangle[2]);
   if (area == 0.0)
-    return Direction::NO_AREA;
+    return VertexOrder::NO_AREA;
 
-  return area > 0 ? Direction::CLOCKWISE : Direction::C_CLOCKWISE;
+  return area > 0 ? VertexOrder::CLOCKWISE : VertexOrder::C_CLOCKWISE;
 }
+
 
 bool pointInTriangle(const Triangle &t, Point p) {
   if (p == t[0] || p == t[1] || p == t[2])
