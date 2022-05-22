@@ -12,8 +12,8 @@ namespace ecd = ear_clip::details;
 
 inline std::ostream &operator<<(std::ostream &s, ecd::Direction direction) {
   static const std::map<ecd::Direction, std::string> DIRS = {
-      {ecd::Direction::CWISE, "Clockwise"},
-      {ecd::Direction::CCWISE, "Counter clockwise"},
+      {ecd::Direction::CLOCKWISE, "Clockwise"},
+      {ecd::Direction::C_CLOCKWISE, "Counter clockwise"},
       {ecd::Direction::NO_AREA, "No area"},
   };
   s << DIRS.at(direction);
@@ -252,8 +252,8 @@ int main() {
   size_t failed = 0;
   ec::enableTrace(false);
 
-  failed += testRingRotation({{{0, 0}, {0, 1}, {1, 0}}}, ecd::Direction::CWISE);
-  failed += testRingRotation({{{0, 0}, {1, 0}, {0, 1}}}, ecd::Direction::CCWISE);
+  failed += testRingRotation({{{0, 0}, {0, 1}, {1, 0}}}, ecd::Direction::CLOCKWISE);
+  failed += testRingRotation({{{0, 0}, {1, 0}, {0, 1}}}, ecd::Direction::C_CLOCKWISE);
   failed += testRingRotation({{{0, 0}, {1, 0}, {2, 0}}}, ecd::Direction::NO_AREA);
   failed += testRingRotation({{{0, 0}, {1, 0}, {0, 0}}}, ecd::Direction::NO_AREA);
 

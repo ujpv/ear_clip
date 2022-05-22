@@ -24,8 +24,8 @@ std::vector<Triangle> triangulate(Ring ring);
 namespace details {
 
 enum class Direction {
-  CWISE,
-  CCWISE,
+  CLOCKWISE,
+  C_CLOCKWISE,
   NO_AREA
 };
 
@@ -38,6 +38,6 @@ Point intersection(Point a, Point b, Point c, Point d);
 double angleRad(Point a, Point b, Point c);
 bool pointInTriangle(const Triangle &t, Point p);
 
-}
+} // namespace details
 
-}
+} // namespace ear_clip

@@ -53,24 +53,22 @@ void enableTrace(bool enable) {
 }
 
 std::vector<Triangle> triangulate(Ring ring) {
-  trace() << "Src  ring: " << ring << '\n';
+  trace() << "triangulate: Source ring: " << ring << '\n';
   ring = details::normalizeRing(std::move(ring));
-  trace() << "Norm ring: " << ring << '\n';
+  trace() << "triangulate: Normalised ring: " << ring << '\n';
 
   if (ring.size() < 3)
     return {};
 
+  // Helpers to iterate over a cycled array:
   auto nextIt = [&ring](const auto &it) {
     auto next = std::next(it);
-    if (next == ring.end())
-      next = ring.begin();
-    return next;
+    return next == ring.end() ? next = ring.begin() : next;
   };
   auto prevIt = [&ring](const auto &it) {
-    if (it == ring.begin())
-      std::prev(ring.end());
-    return std::prev(it);
+    return it == ring.begin() ? std::prev(ring.end()) : std::prev(it);
   };
+
   auto removeEmptyLoops = [&](auto a) {
     bool changed = true;
     while (changed && ring.size() > 3) {
@@ -203,7 +201,7 @@ Direction triangleDirection(const ear_clip::Triangle &triangle) {
   if (area == 0.0)
     return Direction::NO_AREA;
 
-  return area > 0 ? Direction::CWISE : Direction::CCWISE;
+  return area > 0 ? Direction::CLOCKWISE : Direction::C_CLOCKWISE;
 }
 
 bool pointInTriangle(const Triangle &t, Point p) {
