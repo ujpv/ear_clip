@@ -8,20 +8,20 @@
 #include <QPushButton>
 
 class MainWindow : public QWidget {
-    Q_OBJECT
+ Q_OBJECT
 
-public:
-    MainWindow(PolygonBuilder* builder, Triangulation* triangulation, QWidget* p = nullptr);
+ public:
+  MainWindow(PolygonBuilder *builder, Triangulation *triangulation, QWidget *p = nullptr);
 
-public slots:
-    void updateState(PolygonBuilder::State);
+ public slots:
+  void updateState(PolygonBuilder::State);
 
-private:
-    PaintArea* paintArea;
-    QPushButton* resetPB;
-    QPushButton* completePB;
-    QPushButton* triangulatePB;
-    QPushButton* zoomPB;
-    QPushButton* resetViewPB;
-    PolygonBuilder* polygonBuilder;
+ private:
+  PaintArea *paintArea;
+  QPushButton *resetPB;
+  QPushButton *completePB;
+  QPushButton *triangulatePB;
+  QPushButton *zoomPB;
+  QPushButton *resetViewPB;
+  PolygonBuilder *polygonBuilder;
 };
